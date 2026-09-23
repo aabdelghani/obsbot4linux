@@ -113,7 +113,15 @@ int main(int argc, char **argv) {
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("cam", &controller);
     engine.rootContext()->setContextProperty("preview", &preview);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     engine.loadFromModule("Obsbot", "Main");
+#else
+    // Qt 6.4 (Ubuntu 24.04 / Debian 12): no loadFromModule — load the module's
+    // main file by its qrc URL (RESOURCE_PREFIX is pinned in CMakeLists.txt) and
+    // make the module importable from the same prefix.
+    engine.addImportPath(QStringLiteral("qrc:/qt/qml"));
+    engine.load(QUrl(QStringLiteral("qrc:/qt/qml/Obsbot/qml/Main.qml")));
+#endif
     if (engine.rootObjects().isEmpty()) {
         std::fprintf(stderr, "Failed to load QML UI (no display, or missing Qt Quick runtime).\n");
         return 2;

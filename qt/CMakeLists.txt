@@ -21,8 +21,16 @@ if(NOT EXISTS "${SDK_LIB}/libdev.so")
 endif()
 
 # ---- Qt 6 ------------------------------------------------------------------
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Quick Gui Qml QuickControls2 Multimedia)
-qt_standard_project_setup(REQUIRES 6.5)
+# Minimum is Qt 6.4 so the LTS distros build from their own packages (Ubuntu
+# 24.04 / Debian 12 ship 6.4.2 — issue #15). The two 6.5+ conveniences the code
+# used (QQmlApplicationEngine::loadFromModule, QVideoFrame(QImage)) have
+# version-guarded fallbacks in main.cpp / PreviewEngine.cpp.
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Quick Gui Qml QuickControls2 Multimedia)
+if(Qt6_VERSION VERSION_GREATER_EQUAL 6.5)
+    qt_standard_project_setup(REQUIRES 6.5)
+else()
+    qt_standard_project_setup()
+endif()
 
 # QML sources live in the qml/ subdirectory. Opt into the modern qmldir handling
 # when the running Qt knows this policy (6.8+); silences QTP0004 and keeps type

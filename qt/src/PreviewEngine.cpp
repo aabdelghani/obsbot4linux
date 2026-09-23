@@ -27,6 +27,26 @@ int xioctl(int fd, unsigned long req, void *arg) {
 }
 
 constexpr int kBufCount = 4;          // mmap ring size
+
+// QVideoFrame(const QImage&) only exists from Qt 6.8; on older Qt (6.4 on the
+// LTS distros, issue #15) build the frame by hand: allocate an RGBA frame of
+// the same size, map it, and copy the rows in.
+QVideoFrame frameFromImage(const QImage &img) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    return QVideoFrame(img);
+#else
+    const QImage src = img.convertToFormat(QImage::Format_RGBA8888);
+    QVideoFrame frame(QVideoFrameFormat(src.size(), QVideoFrameFormat::Format_RGBA8888));
+    if (!frame.isValid() || !frame.map(QVideoFrame::WriteOnly))
+        return QVideoFrame();
+    const int rowBytes = std::min(frame.bytesPerLine(0), static_cast<int>(src.bytesPerLine()));
+    uchar *dst = frame.bits(0);
+    for (int y = 0; y < src.height(); ++y)
+        std::memcpy(dst + y * frame.bytesPerLine(0), src.constScanLine(y), static_cast<size_t>(rowBytes));
+    frame.unmap();
+    return frame;
+#endif
+}
 constexpr int kPollTimeoutMs = 3000;  // no frame for this long = stalled stream
 constexpr int kMaxDecodeFailures = 30; // consecutive bad JPEGs before giving up
 
@@ -223,7 +243,7 @@ void V4l2CaptureThread::run() {
             // race the sink's destruction (setVideoFrame itself is thread-safe).
             QMutexLocker lock(&m_sinkMutex);
             if (QVideoSink *sink = m_sink.data())
-                sink->setVideoFrame(QVideoFrame(img));
+                sink->setVideoFrame(frameFromImage(img));
         } else if (++decodeFailures >= kMaxDecodeFailures) {
             emit failed(QStringLiteral("cannot decode the MJPG stream (%1 bad frames in a row)")
                             .arg(decodeFailures));
