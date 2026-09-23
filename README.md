@@ -21,10 +21,11 @@ There's no official OBSBOT control app for Linux. This fills that gap with a com
 - **Zoom & FOV** — 1.0–2.0× zoom, and Wide / Medium / Narrow field of view.
 - **Wake / Sleep / Center**, and optional **sleep-on-exit**.
 - **AI tracking** — AI Track (the camera follows a person and keeps their face framed; the ring LED turns blue), Face autofocus, and Gesture control.
-- **Image tuning** — Brightness / Contrast / Saturation / Sharpness (0–100) with one-click reset.
+- **Image tuning** — Brightness / Contrast / Saturation / Sharpness (0–100) with one-click reset, plus **white balance** (auto / manual colour temperature), **exposure** (auto / manual shutter), backlight compensation and anti-flicker through the camera's standard UVC controls.
 - **Presets** — three saved pan/tilt/zoom/FOV positions with save / recall / overwrite / clear, **load-a-preset on startup or wake**, and **return-to-a-preset after AI is turned off**.
 - **Embedded live preview** — the camera's real video stream right in the app window, at a selectable resolution (1080p30 / 1080p60 / 720p60 / 4K30), with an external `ffplay` window kept as a fallback. No fake/placeholder video is ever shown.
 - **Activity log** — every command and its real SDK return code, so you always know what the camera actually did.
+- **Several cameras** — with more than one OBSBOT camera attached, a picker in the top bar chooses which one the app controls (one at a time); the choice is remembered.
 
 Settings and presets persist to `~/.config/obsbot4linux/obsbot4linux.json`.
 
@@ -36,11 +37,11 @@ Settings and presets persist to `~/.config/obsbot4linux/obsbot4linux.json`.
 
 ## Honest by default
 
-Where the camera / SDK genuinely supports a feature, it's wired to a real call and its result is logged. Where support is unverified or absent, the control is **shown disabled with a clear reason** instead of pretending to work. For example, on the Tiny 3 the SDK does not expose HDR, white balance, exposure, or advanced tracking parameters — so those are labeled as such, not faked. No placeholder video, no invented status values.
+Where the camera / SDK genuinely supports a feature, it's wired to a real call and its result is logged. Where support is unverified or absent, the control is **shown disabled with a clear reason** instead of pretending to work. For example, on the Tiny 3 the SDK does not expose HDR or advanced tracking parameters — so those are labeled as such, not faked. White balance and exposure are not in the Tiny 3's SDK surface either, so they are driven through the camera's **standard UVC controls** (the same ones `v4l2-ctl` uses) and every value shown is the driver's readback. No placeholder video, no invented status values.
 
 ## Quick start
 
-**Prebuilt AppImage** (easiest — modern 64-bit Linux):
+**Prebuilt AppImage** (easiest — 64-bit Linux with glibc 2.35+, i.e. Ubuntu 22.04 / Debian 12 / Fedora 36 or newer, Arch):
 
 ```sh
 chmod +x OBSBOT4Linux-x86_64.AppImage
@@ -56,13 +57,15 @@ chmod +x OBSBOT4Linux-x86_64.AppImage
 > vampyren@protonmail.com** and I will remove the bundled build promptly. Building
 > from source (below) never redistributes the SDK — you supply it yourself.
 
-**Build from source** (Arch / CachyOS example):
+**Build from source** (Arch / CachyOS example; Qt 6.4+ is enough, so Ubuntu 24.04 / Debian 12 packages work too):
 
 ```sh
 sudo pacman -S --needed cmake qt6-base qt6-declarative qt6-multimedia qt6-wayland
 # place the OBSBOT SDK under sdk/ (see docs/INSTALL.md), then:
 ./obsbot4linux      # configures, builds, and runs
 ```
+
+Arch users can also build a native package with `packaging/aur/PKGBUILD` (you supply the SDK; see docs/INSTALL.md).
 
 No root, no global install, no sudo for the camera — USB discovery works unprivileged (you just need to be in the `video` group, which is normal).
 
@@ -75,11 +78,11 @@ This app links OBSBOT's proprietary **`libdev`** SDK, which is **not included** 
 
 ## Status
 
-**v0.2.0** — works on real hardware (validated against a Tiny 3, firmware 6.6.9.1). Pre-1.0 while features are still being added. New in 0.2.0: **embedded in-app live preview** (Qt Multimedia; the external `ffplay` window remains as a fallback). Development notes live in [docs/dev/](docs/dev/); planned work is tracked on the [project board](https://github.com/users/vampyren/projects/4).
+**v0.4.0** — works on real hardware (validated against a Tiny 3, firmware 6.6.9.1). Pre-1.0 while features are still being added. New in 0.4.0: **white balance / exposure via UVC** (#16), **multi-camera picker** (#14), Tiny 3 Lite status/wake fixes (#13), **Qt 6.4 builds** and an **LTS-compatible AppImage** built in a container (#15), an **AUR PKGBUILD** (#5). 0.2.0 added the **embedded in-app live preview** (the external `ffplay` window remains as a fallback). Development notes live in [docs/dev/](docs/dev/); planned work is tracked on the [project board](https://github.com/users/vampyren/projects/4).
 
 ## Platform & compatibility
 
-- Linux, x86-64, modern glibc.
+- Linux, x86-64, glibc 2.35+ for the AppImage (Ubuntu 22.04 or newer); any Qt 6.4+ distro when building from source.
 - KDE Plasma and GNOME (and other desktops); runs under Wayland via XWayland, or natively on X11.
 - **Cameras:** OBSBOT Tiny 3 today. The architecture is model-agnostic (the SDK exposes a shared `Device` API), so support for other OBSBOT models can be added as they're tested.
 - The GTK proof-of-concept it grew from is kept under `gui/` for reference.
