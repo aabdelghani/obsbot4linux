@@ -1,0 +1,52 @@
+# Maintainer: see https://github.com/vampyren/obsbot4linux
+#
+# OBSBOT4Linux — unofficial Linux control app for OBSBOT cameras (Qt 6 / QML).
+#
+# The app links OBSBOT's proprietary libdev SDK, which is NOT redistributable
+# and therefore not fetched by this PKGBUILD. Obtain it from OBSBOT (see
+# docs/INSTALL.md §1) and point the build at it:
+#
+#   OBSBOT_SDK_ROOT=/path/to/libdev_v2.1.0_8 makepkg -si
+#
+# The resulting package is built on and for YOUR machine and contains your copy
+# of libdev.so under /usr/lib/obsbot4linux/. Do not upload the built package
+# anywhere; the AUR hosts only this recipe.
+pkgname=obsbot4linux
+pkgver=0.4.0
+pkgrel=1
+pkgdesc="Unofficial Linux control app for OBSBOT PTZ cameras (Tiny 3 and others)"
+arch=('x86_64')
+url="https://github.com/vampyren/obsbot4linux"
+license=('EUPL-1.2')
+depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-multimedia-ffmpeg' 'qt6-wayland' 'hicolor-icon-theme')
+makedepends=('cmake' 'git')
+optdepends=('ffmpeg: external ffplay preview fallback'
+            'ttf-jetbrains-mono: intended UI font')
+options=('!strip' '!debug')   # libdev.so is a vendor binary; leave it untouched, and no -debug split package
+source=("$pkgname::git+https://github.com/vampyren/obsbot4linux.git#tag=v$pkgver")
+sha256sums=('SKIP')
+
+_sdk_root="${OBSBOT_SDK_ROOT:-}"
+
+prepare() {
+    if [ -z "$_sdk_root" ] || [ ! -f "$_sdk_root/linux/x86_64-release/libdev.so" ]; then
+        error "OBSBOT SDK not found. Set OBSBOT_SDK_ROOT to the libdev_v2.1.0_8 directory:"
+        error "  OBSBOT_SDK_ROOT=/path/to/libdev_v2.1.0_8 makepkg -si"
+        return 1
+    fi
+}
+
+build() {
+    cmake -S "$pkgname/qt" -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DSDK_ROOT="$_sdk_root" \
+        -DINSTALL_SDK=ON \
+        -DBUILD_TESTS=OFF
+    cmake --build build
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+    install -Dm644 "$pkgname/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

@@ -12,7 +12,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # ---- Vendored OBSBOT SDK (repo-local) --------------------------------------
-set(SDK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../sdk/libdev_v2.1.0_8")
+# Overridable (-DSDK_ROOT=/abs/path, as docs/INSTALL.md says) — it was a plain
+# set() before, so the documented override silently did nothing.
+set(SDK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../sdk/libdev_v2.1.0_8" CACHE PATH
+    "OBSBOT libdev SDK root (contains include/ and linux/x86_64-release/libdev.so)")
 set(SDK_INC  "${SDK_ROOT}/include")
 set(SDK_LIB  "${SDK_ROOT}/linux/x86_64-release")
 
@@ -97,17 +100,35 @@ target_link_libraries(obsbot4linux PRIVATE
     pthread
 )
 
+include(GNUInstallDirs)
+
+# INSTALL_SDK=ON copies libdev.so next to the installed app
+# (<prefix>/lib/obsbot4linux/) and points the rpath there. For LOCAL packaging
+# only (e.g. the AUR PKGBUILD builds a package on the user's own machine from
+# the SDK the user supplies) — the SDK is OBSBOT's and must never be shipped in
+# a distributed package or repo. Off by default: the repo build keeps the
+# rpath on the repo-local sdk/ dir.
+option(INSTALL_SDK "Install libdev.so alongside the app (local packaging only, never redistribute)" OFF)
+if(INSTALL_SDK)
+    set(_sdk_rpath "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}/obsbot4linux")
+else()
+    set(_sdk_rpath "${SDK_LIB}")
+endif()
+
 # Repo-local runtime linking: find libdev.so.1 (SONAME) from the vendored dir.
 set_target_properties(obsbot4linux PROPERTIES
     BUILD_WITH_INSTALL_RPATH FALSE
     BUILD_RPATH   "${SDK_LIB}"
-    INSTALL_RPATH "${SDK_LIB}"
+    INSTALL_RPATH "${_sdk_rpath}"
 )
 
 # ---- Install rules (used to assemble the AppImage AppDir) ------------------
-include(GNUInstallDirs)
 install(TARGETS obsbot4linux
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+if(INSTALL_SDK)
+    file(GLOB _sdk_libs "${SDK_LIB}/libdev.so*")
+    install(FILES ${_sdk_libs} DESTINATION ${CMAKE_INSTALL_LIBDIR}/obsbot4linux)
+endif()
 install(FILES packaging/obsbot4linux.desktop
     DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES packaging/icons/obsbot4linux-256.png
