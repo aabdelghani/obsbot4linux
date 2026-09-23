@@ -95,6 +95,7 @@ sudo pacman -S --needed cmake qt6-base qt6-declarative qt6-multimedia qt6-waylan
 ```sh
 sudo apt install cmake g++ \
   qt6-base-dev qt6-declarative-dev \
+  libqt6widgets6 \
   qml6-module-qtquick qml6-module-qtquick-controls \
   qml6-module-qtquick-layouts qml6-module-qtquick-window \
   qt6-multimedia-dev qml6-module-qtmultimedia \
@@ -179,6 +180,15 @@ OBSBOT_SDK_ROOT=/path/to/libdev_v2.1.0_8 makepkg -si
 - **Config** is stored per-user at
   `~/.config/obsbot4linux/obsbot4linux.json`
   (override with `OBSBOT4LINUX_CONFIG=/path/to/file`).
+- **System tray:** closing the window hides the app to the tray (Settings → Desktop →
+  "Keep running in the tray" to change); the tray menu has Show/Hide, Wake, Sleep,
+  the presets and Quit (also Ctrl+Q). `obsbot4linux --tray` starts hidden.
+  On GNOME the tray needs the AppIndicator extension (Ubuntu ships it enabled);
+  without any tray the app behaves as before and the toggles say so.
+- **Start with system:** Settings → Desktop → "Start with system" writes
+  `~/.config/autostart/obsbot4linux.desktop`, which launches the same binary (or
+  the same AppImage) with `--tray` at login. The toggle reflects whether that
+  file exists, so removing it by hand is picked up too.
 - **Several OBSBOT cameras:** the app controls one at a time. A *Camera* picker
   appears in the top bar when more than one is attached; the choice is remembered.
 - **Debug log on the terminal:** `OBSBOT4LINUX_LOG_STDERR=1 ./obsbot4linux`

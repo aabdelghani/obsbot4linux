@@ -15,7 +15,7 @@ import Obsbot
 
 ApplicationWindow {
     id: win
-    visible: true
+    visible: !startHidden   // --tray starts hidden in the system tray
     width: 1320
     height: 940
     minimumWidth: 1040
@@ -29,6 +29,15 @@ ApplicationWindow {
     // If the window loses focus/deactivates while the puck is held, halt motion
     // immediately rather than relying solely on the drag-release/deadman paths.
     onActiveChanged: if (!active) cam.gimbalStop()
+
+    // Close → tray (when a tray exists and the setting is on); otherwise quit.
+    onClosing: (close) => {
+        if (tray.available && cam.closeToTray) {
+            close.accepted = false
+            win.hide()
+        }
+    }
+    Shortcut { sequences: [StandardKey.Quit]; onActivated: tray.quit() }
 
     readonly property var pageTitles: ["Live Control", "Image & Exposure", "AI Tracking", "Presets", "Settings", "Activity Log"]
 

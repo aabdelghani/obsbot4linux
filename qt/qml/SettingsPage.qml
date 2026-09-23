@@ -66,6 +66,72 @@ Item {
             }
         }
 
+        SectionLabel { text: "Desktop" }
+
+        // Start with system: an XDG autostart entry that launches the app with
+        // --tray (hidden). Truth is the file on disk, not a stored flag.
+        GlassPanel {
+            Layout.fillWidth: true
+            implicitHeight: autostartRow.implicitHeight + 24
+            RowLayout {
+                id: autostartRow
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 12
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 1
+                    Text { text: "Start with system"; color: Theme.fg; font.family: Theme.mono; font.pixelSize: 13 }
+                    Text {
+                        text: (tray.available
+                               ? "Launch at login, hidden in the system tray. Writes " + tray.autostartPath + "."
+                               : "No system tray was found on this desktop, so the app cannot start hidden. "
+                                 + "On GNOME, enable the AppIndicator extension.")
+                        color: Theme.dimmer; font.family: Theme.sans; font.pixelSize: 12
+                        wrapMode: Text.WordWrap; Layout.fillWidth: true
+                    }
+                }
+                ToggleChip {
+                    text: tray.startWithSystem ? "On" : "Off"
+                    tone: Theme.live
+                    enabled: tray.available
+                    checked: tray.startWithSystem
+                    onToggled: (c) => tray.startWithSystem = c
+                }
+            }
+        }
+
+        // Close to tray (keeps the camera controls one click away).
+        GlassPanel {
+            Layout.fillWidth: true
+            implicitHeight: trayRow.implicitHeight + 24
+            RowLayout {
+                id: trayRow
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 12
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 1
+                    Text { text: "Keep running in the tray"; color: Theme.fg; font.family: Theme.mono; font.pixelSize: 13 }
+                    Text {
+                        text: "Closing the window hides it to the tray instead of quitting; the tray menu has Wake, Sleep and "
+                            + "the presets. Quit from the tray menu or with Ctrl+Q."
+                            + (tray.available ? "" : " (No system tray found on this desktop — closing quits.)")
+                        color: Theme.dimmer; font.family: Theme.sans; font.pixelSize: 12
+                        wrapMode: Text.WordWrap; Layout.fillWidth: true
+                    }
+                }
+                ToggleChip {
+                    text: cam.closeToTray ? "On" : "Off"
+                    tone: Theme.live
+                    enabled: tray.available
+                    checked: cam.closeToTray
+                    onToggled: (c) => cam.closeToTray = c
+                }
+            }
+        }
+
         SectionLabel { text: "Power & sleep" }
 
         // Put the camera to sleep automatically when the app is closed.

@@ -26,6 +26,7 @@ There's no official OBSBOT control app for Linux. This fills that gap with a com
 - **Embedded live preview** — the camera's real video stream right in the app window, at a selectable resolution (1080p30 / 1080p60 / 720p60 / 4K30), with an external `ffplay` window kept as a fallback. No fake/placeholder video is ever shown.
 - **Activity log** — every command and its real SDK return code, so you always know what the camera actually did.
 - **Several cameras** — with more than one OBSBOT camera attached, a picker in the top bar chooses which one the app controls (one at a time); the choice is remembered.
+- **Lives in the tray** — closing the window keeps it running in the system tray with Wake / Sleep / presets in the tray menu; optional **start with system** (hidden, via an XDG autostart entry) and `--tray` to launch hidden.
 
 Settings and presets persist to `~/.config/obsbot4linux/obsbot4linux.json`.
 
@@ -78,7 +79,7 @@ This app links OBSBOT's proprietary **`libdev`** SDK, which is **not included** 
 
 ## Status
 
-**v0.4.0** — works on real hardware (validated against a Tiny 3, firmware 6.6.9.1). Pre-1.0 while features are still being added. New in 0.4.0: **white balance / exposure via UVC** (#16), **multi-camera picker** (#14), Tiny 3 Lite status/wake fixes (#13), **Qt 6.4 builds** and an **LTS-compatible AppImage** built in a container (#15), an **AUR PKGBUILD** (#5). 0.2.0 added the **embedded in-app live preview** (the external `ffplay` window remains as a fallback). Development notes live in [docs/dev/](docs/dev/); planned work is tracked on the [project board](https://github.com/users/vampyren/projects/4).
+**v0.5.0** — works on real hardware (validated against a Tiny 3, firmware 6.6.9.1). Pre-1.0 while features are still being added. New in 0.5.0: **system tray** (close-to-tray, tray menu, `--tray`, start with system). 0.4.0 added: **white balance / exposure via UVC** (#16), **multi-camera picker** (#14), Tiny 3 Lite status/wake fixes (#13), **Qt 6.4 builds** and an **LTS-compatible AppImage** built in a container (#15), an **AUR PKGBUILD** (#5). 0.2.0 added the **embedded in-app live preview** (the external `ffplay` window remains as a fallback). Development notes live in [docs/dev/](docs/dev/); planned work is tracked on the [project board](https://github.com/users/vampyren/projects/4).
 
 ## Platform & compatibility
 

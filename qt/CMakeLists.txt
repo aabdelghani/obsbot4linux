@@ -5,7 +5,7 @@
 # script also exports LD_LIBRARY_PATH as a belt-and-braces fallback.
 cmake_minimum_required(VERSION 3.21)
 
-project(obsbot4linux VERSION 0.4.0 LANGUAGES CXX)
+project(obsbot4linux VERSION 0.5.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,7 +28,7 @@ endif()
 # 24.04 / Debian 12 ship 6.4.2 — issue #15). The two 6.5+ conveniences the code
 # used (QQmlApplicationEngine::loadFromModule, QVideoFrame(QImage)) have
 # version-guarded fallbacks in main.cpp / PreviewEngine.cpp.
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Quick Gui Qml QuickControls2 Multimedia)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Quick Gui Qml QuickControls2 Multimedia Widgets)
 if(Qt6_VERSION VERSION_GREATER_EQUAL 6.5)
     qt_standard_project_setup(REQUIRES 6.5)
 else()
@@ -50,6 +50,15 @@ qt_add_executable(obsbot4linux
     src/Settings.cpp
     src/UvcControls.cpp
     src/V4l2Scan.cpp
+    src/TrayController.cpp
+)
+
+# Window + tray icon, compiled in so the source build and the AppImage both
+# have it without a theme lookup (:/icons/obsbot4linux-256.png).
+qt_add_resources(obsbot4linux "appicons"
+    PREFIX "/icons"
+    BASE packaging/icons
+    FILES packaging/icons/obsbot4linux-256.png packaging/icons/obsbot4linux.svg
 )
 
 # Theme.qml is a singleton (pragma Singleton).
@@ -96,6 +105,7 @@ target_link_libraries(obsbot4linux PRIVATE
     Qt6::Gui
     Qt6::Qml
     Qt6::Multimedia
+    Qt6::Widgets      # QSystemTrayIcon / QMenu only (the UI itself is QML)
     "${SDK_LIB}/libdev.so"
     pthread
 )

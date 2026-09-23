@@ -72,6 +72,7 @@ class CameraController : public QObject {
     Q_PROPERTY(bool sleepOnExit READ sleepOnExit WRITE setSleepOnExit NOTIFY settingsChanged)
     // Start the embedded preview on Wake (issue #13; main.cpp acts on wakeRequested).
     Q_PROPERTY(bool wakeStartsPreview READ wakeStartsPreview WRITE setWakeStartsPreview NOTIFY settingsChanged)
+    Q_PROPERTY(bool closeToTray READ closeToTray WRITE setCloseToTray NOTIFY settingsChanged)
     // Experimental, OPT-IN: slow the status cadence while gesture control is on
     // (frequent polling suppresses the camera's gesture recognizer). Off by
     // default so normal behavior is unchanged; kept toggleable for A/B testing
@@ -144,6 +145,7 @@ public:
     QString previewRes() const;   // e.g. "1080p60"
     bool sleepOnExit() const { return m_settings.sleepOnExit; }
     bool wakeStartsPreview() const { return m_settings.wakeStartsPreview; }
+    bool closeToTray() const { return m_settings.closeToTray; }
     bool gestureLowTraffic() const { return m_settings.gestureLowTraffic; }
     int autoSleepIndex() const { return m_settings.autoSleepIdx; }
     int micSleepIndex() const { return m_settings.micSleepIdx; }
@@ -173,6 +175,7 @@ public slots:
     void setPreviewResIndex(int idx);
     void setSleepOnExit(bool on);
     void setWakeStartsPreview(bool on);
+    void setCloseToTray(bool on);
     void setGestureLowTraffic(bool on);
     void setAutoSleepIndex(int idx);
     void setMicSleepIndex(int idx);

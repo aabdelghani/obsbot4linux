@@ -51,6 +51,11 @@ struct AppSettings {
     // open. Off by default; Wake alone is enough on the Tiny 3.
     bool wakeStartsPreview = false;
 
+    // Close the window to the tray instead of quitting (when a tray exists).
+    // On by default: the tray is the point of staying resident; Quit lives in
+    // the tray menu and on Ctrl+Q.
+    bool closeToTray = true;
+
     // Multi-camera (issue #14): SN of the camera to bind when several are
     // attached. Set whenever the user picks a camera; empty = first enumerated.
     QString preferredSn;

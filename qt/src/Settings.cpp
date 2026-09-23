@@ -56,6 +56,7 @@ QJsonObject Settings::toJson(const AppSettings &s) {
     o["sleepOnExit"] = s.sleepOnExit;
     o["wakeStartsPreview"] = s.wakeStartsPreview;
     o["preferredSn"] = s.preferredSn;
+    o["closeToTray"] = s.closeToTray;
 
     QJsonArray presets;
     for (const auto &p : s.presets)
@@ -102,6 +103,7 @@ AppSettings Settings::fromJson(const QJsonObject &o) {
     s.sleepOnExit = o.value("sleepOnExit").toBool(s.sleepOnExit);
     s.wakeStartsPreview = o.value("wakeStartsPreview").toBool(s.wakeStartsPreview);
     s.preferredSn = o.value("preferredSn").toString(s.preferredSn);
+    s.closeToTray = o.value("closeToTray").toBool(s.closeToTray);
 
     const QJsonArray presets = o.value("presets").toArray();
     for (int i = 0; i < 3 && i < presets.size(); ++i)

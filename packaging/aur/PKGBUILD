@@ -12,7 +12,7 @@
 # of libdev.so under /usr/lib/obsbot4linux/. Do not upload the built package
 # anywhere; the AUR hosts only this recipe.
 pkgname=obsbot4linux
-pkgver=0.4.0
+pkgver=0.5.0
 pkgrel=1
 pkgdesc="Unofficial Linux control app for OBSBOT PTZ cameras (Tiny 3 and others)"
 arch=('x86_64')

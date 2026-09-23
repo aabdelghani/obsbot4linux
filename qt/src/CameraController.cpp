@@ -290,6 +290,13 @@ void CameraController::setSleepOnExit(bool on) {
     emit settingsChanged();
 }
 
+void CameraController::setCloseToTray(bool on) {
+    if (on == m_settings.closeToTray) return;
+    m_settings.closeToTray = on;
+    persist();
+    emit settingsChanged();
+}
+
 void CameraController::setWakeStartsPreview(bool on) {
     if (on == m_settings.wakeStartsPreview) return;
     m_settings.wakeStartsPreview = on;

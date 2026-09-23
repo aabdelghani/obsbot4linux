@@ -7,9 +7,11 @@
 // exits with a code that reflects the DEVICE result only:
 //     0 = device found, 3 = no device by timeout, 2 = app/init error.
 // (CODE_REVIEW #11: a headless run no longer returns 0 for "no device".)
-#include <QGuiApplication>
+#include <QApplication>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickWindow>
 #include <QTimer>
 
 #include <algorithm>
@@ -18,21 +20,26 @@
 
 #include "CameraController.h"
 #include "PreviewEngine.h"
+#include "TrayController.h"
 #include "UvcControls.h"
 
 int main(int argc, char **argv) {
     int waitMs = 6000;
     bool selfTest = false;
+    bool startInTray = false;   // --tray: start hidden (autostart entry uses it)
 
     for (int i = 1; i < argc; ++i) {
         const QString a = QString::fromLocal8Bit(argv[i]);
         if (a == "--self-test") {
             selfTest = true;
+        } else if (a == "--tray") {
+            startInTray = true;
         } else if (a == "--wait-ms" && i + 1 < argc) {
             waitMs = std::max(0, std::atoi(argv[++i]));
         } else if (a == "-h" || a == "--help") {
-            std::printf("Usage: %s [--wait-ms N] [--self-test]\n", argv[0]);
+            std::printf("Usage: %s [--wait-ms N] [--tray] [--self-test]\n", argv[0]);
             std::printf("  --wait-ms N   USB discovery timeout in ms (default 6000)\n");
+            std::printf("  --tray        Start hidden in the system tray (used by the autostart entry)\n");
             std::printf("  --self-test   Run discovery once headless, then exit\n");
             std::printf("                (exit 0 = device found, 3 = none, 2 = init error)\n");
             return 0;
@@ -57,9 +64,13 @@ int main(int argc, char **argv) {
             qputenv("QT_QPA_PLATFORM", "xcb");
     }
 
-    QGuiApplication app(argc, argv);
-    QGuiApplication::setApplicationName("OBSBOT4Linux");
-    QGuiApplication::setOrganizationName("obsbot4linux");
+    // QApplication (not QGuiApplication) only for QSystemTrayIcon/QMenu; the
+    // UI itself is pure QML.
+    QApplication app(argc, argv);
+    QApplication::setApplicationName("OBSBOT4Linux");
+    QApplication::setOrganizationName("obsbot4linux");
+    QApplication::setDesktopFileName("obsbot4linux");   // Wayland/GNOME icon + WM class association
+    QApplication::setWindowIcon(QIcon(QStringLiteral(":/icons/obsbot4linux-256.png")));
 
     CameraController controller;
 
@@ -150,10 +161,20 @@ int main(int argc, char **argv) {
     // after the QML log model is connected (first event-loop pass).
     QTimer::singleShot(0, &uvc, [&uvc]() { uvc.setDevicePath(QString()); });
 
+    // System tray + autostart. With a tray present the app stays resident:
+    // closing the window hides it (setting), Quit is in the tray menu / Ctrl+Q.
+    TrayController tray(&controller);
+    QObject::connect(&tray, &TrayController::logLine, &controller, &CameraController::logLine);
+    app.setQuitOnLastWindowClosed(!tray.available());
+    if (startInTray && !tray.available())
+        std::fprintf(stderr, "--tray: no system tray available — showing the window instead.\n");
+
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("cam", &controller);
     engine.rootContext()->setContextProperty("preview", &preview);
     engine.rootContext()->setContextProperty("uvc", &uvc);
+    engine.rootContext()->setContextProperty("tray", &tray);
+    engine.rootContext()->setContextProperty("startHidden", startInTray && tray.available());
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     engine.loadFromModule("Obsbot", "Main");
 #else
@@ -167,6 +188,7 @@ int main(int argc, char **argv) {
         std::fprintf(stderr, "Failed to load QML UI (no display, or missing Qt Quick runtime).\n");
         return 2;
     }
+    tray.attachWindow(qobject_cast<QQuickWindow *>(engine.rootObjects().first()));
 
     controller.start(waitMs);
     return app.exec();
