@@ -42,9 +42,12 @@ This AppImage bundles OBSBOT's proprietary `libdev.so` SDK for out-of-the-box co
 1. Feature branch approved by hardware testing → merge `--no-ff` into `main`
    with `Closes #N` lines; push.
 2. Tag: `git tag -a vX.Y.Z -m "OBSBOT4Linux vX.Y.Z — headline"`; push the tag.
-3. Verify `dist/OBSBOT4Linux-x86_64.AppImage` is built FROM the merged commit
-   (check the packed version string: `strings -e l` on the extracted binary)
-   and passes `--self-test`.
+3. Build the AppImage **in the container** so it runs on LTS distros
+   (`qt/packaging/build-appimage-docker.sh`; issue #15) — never publish a
+   native build from a rolling distro. Verify `dist/OBSBOT4Linux-x86_64.AppImage`
+   is built FROM the merged commit (check the packed version string:
+   `strings -e l` on the extracted binary), that the script's portability report
+   says glibc ≤ 2.35, and that it passes `--self-test`.
 4. `gh release create vX.Y.Z dist/OBSBOT4Linux-x86_64.AppImage` with the title
    and body per the template above.
 5. Delete the feature branch (local + remote).

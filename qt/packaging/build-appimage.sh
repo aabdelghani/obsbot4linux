@@ -17,7 +17,11 @@ set -euo pipefail
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)   # qt/packaging
 QT_DIR=$(cd -- "$HERE/.." && pwd)                   # qt/
 REPO=$(cd -- "$QT_DIR/.." && pwd)                   # repo root
-SDK_LIB="$REPO/sdk/libdev_v2.1.0_8/linux/x86_64-release"
+# SDK location: repo-local by default; SDK_ROOT=/abs/path overrides (the docker
+# wrapper mounts the SDK there because sdk/ is often a symlink on dev boxes).
+SDK_ROOT="${SDK_ROOT:-$REPO/sdk/libdev_v2.1.0_8}"
+SDK_LIB="$SDK_ROOT/linux/x86_64-release"
+[ -f "$SDK_LIB/libdev.so" ] || { echo "error: libdev.so not found under $SDK_LIB (set SDK_ROOT)" >&2; exit 1; }
 
 BUILD="$QT_DIR/build-appimage"
 APPDIR="$QT_DIR/AppDir"
@@ -64,7 +68,7 @@ ln -sf appimagetool-x86_64.AppImage "$TOOLS/appimagetool"
 
 # --- configure + build + install into AppDir --------------------------------
 rm -rf "$BUILD" "$APPDIR"
-cmake -S "$QT_DIR" -B "$BUILD" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
+cmake -S "$QT_DIR" -B "$BUILD" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DSDK_ROOT="$SDK_ROOT"
 cmake --build "$BUILD" -j
 DESTDIR="$APPDIR" cmake --install "$BUILD" --prefix /usr
 
@@ -146,3 +150,13 @@ rm -f "$OUT"
 ARCH=x86_64 "$TOOLS/appimagetool" "$APPDIR" "$OUT"
 chmod +x "$OUT"
 echo ">> done: $OUT"
+
+# --- portability report (issue #15) -----------------------------------------
+# The AppImage inherits the glibc of the build host. Report the highest
+# GLIBC_x.y symbol version any bundled ELF requires, so a build accidentally
+# made on a rolling distro is caught before release rather than by a user on
+# an LTS box ("version GLIBC_2.43 not found").
+MAXGLIBC=$( { find "$APPDIR/usr" -type f \( -name '*.so*' -o -perm -u+x \) -print0 \
+              | xargs -0 objdump -T 2>/dev/null | grep -o 'GLIBC_[0-9.]*' ; } \
+            | sort -t. -k1,1n -k2,2n -u | tail -1 || true)
+echo ">> minimum glibc required by the bundle: ${MAXGLIBC:-unknown} (build host: $(ldd --version | head -1 | grep -o '[0-9.]*$'))"

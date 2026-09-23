@@ -2,8 +2,30 @@
 
 A self-contained **AppImage** so end users just download it, `chmod +x`, and run —
 no Qt install, no build. Bundles Qt 6, the QML runtime, the platform plugins
-(xcb + wayland + offscreen), and the OBSBOT SDK (`libdev.so`). Targets **modern
-Linux** (recent glibc) — no old-distro compatibility shims.
+(xcb + offscreen; wayland opt-in), and the OBSBOT SDK (`libdev.so`).
+
+## Portability: build it in the container (issue #15)
+
+An AppImage inherits the **glibc of the machine it is built on**, and glibc is
+forward-compatible only. The v0.3.1 image was built on a rolling distro, needed
+`GLIBC_2.43`, and refused to start on Ubuntu 24.04 (glibc 2.39). Releases are
+therefore built inside an **Ubuntu 22.04** container (glibc 2.35) with Qt 6.9
+from the Qt archive:
+
+```sh
+qt/packaging/build-appimage-docker.sh   # docker only; → dist/OBSBOT4Linux-x86_64.AppImage
+```
+
+`docker/Dockerfile` is the builder (Ubuntu 22.04 + build deps + Qt via
+aqtinstall, pinned). The repo is bind-mounted, so outputs land in the checkout
+as usual. The script ends with a **portability report** — the highest
+`GLIBC_x.y` symbol version any bundled ELF needs (currently 2.34) — so a build
+accidentally made on a newer host is caught before release, not by a user.
+Hardware-validated: the container build runs on Ubuntu 24.04 (`--self-test`
+finds the Tiny 3, full GUI + embedded preview work).
+
+`SDK_ROOT=/abs/path` overrides the SDK location for both scripts (the docker
+wrapper resolves a symlinked `sdk/` for you).
 
 > **Prebuilt artifact:** `dist/OBSBOT4Linux-x86_64.AppImage` (validated:
 > loads the full GUI headless with no errors; `--self-test` runs discovery +
@@ -78,7 +100,7 @@ the missing libs onto `LD_LIBRARY_PATH` before running (they were pulled from th
 distro's own runtime + the `libxcb-cursor0` package). On a real KDE/GNOME desktop
 you don't need any of that.
 
-Built against Ubuntu's current glibc; runs on modern rolling distros (CachyOS/
-Arch). If a target has an older glibc than the build host, rebuild there.
+A native `build-appimage.sh` run is built against the host's glibc; use the
+docker wrapper above for anything you intend to publish.
 
 A Flatpak manifest can be added later if Flathub distribution is wanted.
