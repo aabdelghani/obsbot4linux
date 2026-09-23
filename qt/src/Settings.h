@@ -51,6 +51,10 @@ struct AppSettings {
     // open. Off by default; Wake alone is enough on the Tiny 3.
     bool wakeStartsPreview = false;
 
+    // Multi-camera (issue #14): SN of the camera to bind when several are
+    // attached. Set whenever the user picks a camera; empty = first enumerated.
+    QString preferredSn;
+
     // Presets (app-local; the SDK's native presets are undocumented for Tiny 3).
     std::array<PresetData, 3> presets{};
 

@@ -148,9 +148,13 @@ void CameraWorker::rescan(int waitMs) {
 void CameraWorker::pollTick() {
     if (m_shuttingDown) { m_pollTimer->stop(); return; }
 
+    // Bind the preferred camera if it has enumerated, else the first one that
+    // has (an SN appears only once the SDK's identity handshake is done).
     std::shared_ptr<Device> found;
     for (const auto &d : Devices::get().getDevList()) {
-        if (d && !d->devSn().empty()) { found = d; break; }
+        if (!d || d->devSn().empty()) continue;
+        if (!found) found = d;
+        if (!m_preferredSn.isEmpty() && QString::fromStdString(d->devSn()) == m_preferredSn) { found = d; break; }
     }
     if (found) {
         m_pollTimer->stop();
@@ -196,6 +200,54 @@ void CameraWorker::bindDevice(const std::shared_ptr<Device> &d) {
     // Read real zoom + current image params once now (blocking getters, safe here).
     refreshZoom();
     cmdReadImageParams();
+    emitDeviceList();
+}
+
+void CameraWorker::setPreferredSn(const QString &sn) { m_preferredSn = sn; }
+
+void CameraWorker::emitDeviceList() {
+    QStringList sns, labels;
+    for (const auto &d : Devices::get().getDevList()) {
+        if (!d || d->devSn().empty()) continue;
+        const QString sn = QString::fromStdString(d->devSn());
+        sns << sn;
+        // "Tiny3 ·81QYA": product + SN tail is enough to tell two cameras apart.
+        labels << QStringLiteral("%1 ·%2").arg(QLatin1String(productName(d->productType())), sn.right(5));
+    }
+    emit deviceListChanged(sns, labels, m_sn);
+}
+
+void CameraWorker::unbindDevice() {
+    if (!m_dev) return;
+    if (m_velocityActive) { m_dev->gimbalSpeedCtrlR(0.0, 0.0, 0.0); m_velocityActive = false; }
+    m_velocityWatchdog->stop();
+    m_dev->enableDevStatusCallback(false);
+    m_dev.reset();
+    m_sn.clear();
+    m_aiTracking = false;
+    m_aiOffGrace.invalidate();
+    m_aiOnGrace.invalidate();
+    setGestureFriendly(false);
+}
+
+void CameraWorker::cmdSelectDevice(const QString &sn) {
+    if (m_shuttingDown || sn.isEmpty()) return;
+    m_preferredSn = sn;
+    if (sn == m_sn) return;
+    std::shared_ptr<Device> target = Devices::get().getDevBySn(sn.toStdString());
+    if (!target) {
+        emit logLine("warn", QStringLiteral("select camera: SN %1 is not attached").arg(sn));
+        emitDeviceList();
+        return;
+    }
+    emit logLine("cmd", QStringLiteral("→ switch camera to %1 (%2)")
+                            .arg(QLatin1String(productName(target->productType())), sn));
+    if (m_dev) {
+        unbindDevice();
+        emit deviceLost(QStringLiteral("switched camera"));
+    }
+    m_pollTimer->stop();
+    bindDevice(target);
 }
 
 // ---------------------------------------------------------------------------
@@ -287,15 +339,27 @@ void CameraWorker::onDevChanged(const QString &sn, bool plugged) {
         // Unplug. If it's our device (or we can no longer see any), drop it.
         if (m_dev && (sn == m_sn || sn.isEmpty())) {
             emit logLine("warn", QStringLiteral("device unplugged (SN %1)").arg(m_sn));
-            if (m_dev) m_dev->enableDevStatusCallback(false);
-            m_dev.reset();
-            m_aiTracking = false;
+            unbindDevice();
             emit deviceLost(QStringLiteral("USB unplug"));
+            // Another camera may still be attached (#14) — fall over to it.
+            startDiscovery(m_pollTimeoutMs);
+        } else {
+            emit logLine("net", QStringLiteral("another OBSBOT device unplugged (SN %1)").arg(sn));
         }
     } else if (!m_dev) {
         emit logLine("net", QStringLiteral("device plugged in (SN %1) — reconnecting").arg(sn));
         startDiscovery(m_pollTimeoutMs);
+    } else {
+        // A second camera while one is bound (#14): list it; switch to it only
+        // if it is the user's preferred one (e.g. it enumerated later at startup).
+        emit logLine("net", QStringLiteral("another OBSBOT device plugged in (SN %1)").arg(sn));
+        if (!m_preferredSn.isEmpty() && sn == m_preferredSn && sn != m_sn) {
+            emit logLine("sys", QStringLiteral("preferred camera appeared — switching to it"));
+            cmdSelectDevice(sn);
+            return;
+        }
     }
+    emitDeviceList();
 }
 
 // ---------------------------------------------------------------------------

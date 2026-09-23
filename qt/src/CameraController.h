@@ -37,6 +37,10 @@ class CameraController : public QObject {
     Q_PROPERTY(int enumId MEMBER m_enumId NOTIFY identityChanged)
     // V4L2 node of the connected camera per the SDK (empty when unknown/none).
     Q_PROPERTY(QString videoDevPath READ videoDevPath NOTIFY videoDevPathChanged)
+    // Multi-camera (#14): every enumerated OBSBOT device [{sn, label, current}]
+    // and a convenience count; selectDevice() switches (persisted as preferred).
+    Q_PROPERTY(QVariantList devices READ devices NOTIFY devicesChanged)
+    Q_PROPERTY(int deviceCount READ deviceCount NOTIFY devicesChanged)
 
     // ----- live device state -----
     Q_PROPERTY(int runState READ runState NOTIFY statusChanged)
@@ -121,6 +125,8 @@ public:
     // property getters
     int connState() const { return m_connState; }
     QString videoDevPath() const { return m_videoDevPath; }
+    QVariantList devices() const;
+    int deviceCount() const { return m_deviceSns.size(); }
     bool connected() const { return m_connState == Connected; }
     bool discovering() const { return m_connState == Discovering; }
     int runState() const { return m_runState; }
@@ -187,6 +193,7 @@ public slots:
     void setHdr(bool on);             // HDR/WDR on/off (only when capHdr)
     void setImageParam(const QString &param, int value);  // brightness/contrast/saturation/sharpness
     void rescan();
+    void selectDevice(const QString &sn);   // #14: bind another attached camera
     void launchPreview();   // FALLBACK: (re)launch the external ffplay preview
     void stopPreview();     // terminate the ffplay preview (also called on shutdown)
     void copyToClipboard(const QString &text);   // e.g. "Copy" on the Log page
@@ -219,12 +226,14 @@ signals:
     // (the controller itself does not know the PreviewEngine).
     void wakeRequested();
     void videoDevPathChanged(const QString &path);
+    void devicesChanged();
 
 private slots:
     void onConnectionResolved(bool found, const QString &product, const QString &sn,
                               const QString &fw, const QString &mode, int enumId);
     void onDeviceLost(const QString &reason);
     void onVideoNode(const QString &path);
+    void onDeviceList(const QStringList &sns, const QStringList &labels, const QString &currentSn);
     void onStatusUpdate(int runState, int aiModeRaw, double zoom, bool zoomValid);
     void onAuxStatus(bool faceFocus, bool hdrOn, bool hdrSupport, int fps, int sleepMicro, int autoSleepSec);
     void onZoomUpdate(double zoom, bool valid);
@@ -255,6 +264,8 @@ private:
     bool m_hadDevice = false;
     QString m_product, m_sn, m_firmware, m_mode;
     QString m_videoDevPath;
+    QStringList m_deviceSns, m_deviceLabels;   // #14 snapshot from the worker
+    QString m_currentSn;
     int m_enumId = -1;
     double m_zoom = 1.0;
     bool m_zoomValid = false;

@@ -60,6 +60,7 @@ CameraController::CameraController(QObject *parent) : QObject(parent) {
     connect(m_worker, &CameraWorker::connectionResolved, this, &CameraController::onConnectionResolved);
     connect(m_worker, &CameraWorker::deviceLost, this, &CameraController::onDeviceLost);
     connect(m_worker, &CameraWorker::videoNodeResolved, this, &CameraController::onVideoNode);
+    connect(m_worker, &CameraWorker::deviceListChanged, this, &CameraController::onDeviceList);
     connect(m_worker, &CameraWorker::statusUpdate, this, &CameraController::onStatusUpdate);
     connect(m_worker, &CameraWorker::auxStatus, this, &CameraController::onAuxStatus);
     connect(m_worker, &CameraWorker::zoomUpdate, this, &CameraController::onZoomUpdate);
@@ -91,6 +92,9 @@ CameraController::~CameraController() {
 void CameraController::start(int waitMs) {
     m_connState = Discovering;
     emit connStateChanged();
+    if (!m_settings.preferredSn.isEmpty())
+        QMetaObject::invokeMethod(m_worker, "setPreferredSn", Qt::QueuedConnection,
+                                  Q_ARG(QString, m_settings.preferredSn));
     QMetaObject::invokeMethod(m_worker, "startDiscovery", Qt::QueuedConnection, Q_ARG(int, waitMs));
 }
 
@@ -420,6 +424,43 @@ void CameraController::gestureQuietTest() {
     // ALL periodic SDK traffic for 60 s to find out whether the traffic or the
     // mere session suppresses the recognizer.
     QMetaObject::invokeMethod(m_worker, "cmdQuietMode", Qt::QueuedConnection, Q_ARG(int, 60));
+}
+
+QVariantList CameraController::devices() const {
+    QVariantList out;
+    for (int i = 0; i < m_deviceSns.size(); ++i) {
+        QVariantMap m;
+        m["sn"] = m_deviceSns[i];
+        m["label"] = i < m_deviceLabels.size() ? m_deviceLabels[i] : m_deviceSns[i];
+        m["current"] = (m_deviceSns[i] == m_currentSn);
+        out.append(m);
+    }
+    return out;
+}
+
+void CameraController::onDeviceList(const QStringList &sns, const QStringList &labels, const QString &currentSn) {
+    if (sns == m_deviceSns && labels == m_deviceLabels && currentSn == m_currentSn) return;
+    const int before = m_deviceSns.size();
+    m_deviceSns = sns;
+    m_deviceLabels = labels;
+    m_currentSn = currentSn;
+    if (sns.size() > 1 && before <= 1)
+        emit logLine("sys", QStringLiteral("%1 OBSBOT cameras attached — pick one in the top bar (the app controls one at a time)")
+                                .arg(sns.size()));
+    emit devicesChanged();
+}
+
+void CameraController::selectDevice(const QString &sn) {
+    if (sn.isEmpty()) return;
+    if (sn != m_settings.preferredSn) {
+        m_settings.preferredSn = sn;   // remembered: next launch binds this camera first
+        persist();
+        emit settingsChanged();
+    }
+    if (sn == m_currentSn) return;
+    m_connState = Discovering;
+    emit connStateChanged();
+    QMetaObject::invokeMethod(m_worker, "cmdSelectDevice", Qt::QueuedConnection, Q_ARG(QString, sn));
 }
 
 void CameraController::rescan() {

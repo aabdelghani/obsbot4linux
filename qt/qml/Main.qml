@@ -77,6 +77,22 @@ ApplicationWindow {
                     }
                 }
                 Item { Layout.fillWidth: true }
+                // Camera picker (#14) — only when more than one OBSBOT device
+                // is attached. The app controls one camera at a time; picking
+                // another rebinds (and is remembered for the next launch).
+                RowLayout {
+                    visible: cam.deviceCount > 1
+                    spacing: 8
+                    SectionLabel { text: "Camera" }
+                    Segmented {
+                        id: camPick
+                        readonly property var labels: cam.devices.map(d => d.label)
+                        options: labels
+                        implicitWidth: Math.max(160, options.length * 118)
+                        currentIndex: cam.devices.findIndex(d => d.current)
+                        onActivated: (i) => cam.selectDevice(cam.devices[i].sn)
+                    }
+                }
                 StatusPill {}
             }
 

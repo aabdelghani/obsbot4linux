@@ -27,6 +27,12 @@ public slots:
     void init();                       // one-time setup, runs on the worker thread
     void startDiscovery(int waitMs);
     void rescan(int waitMs);
+    // Multi-camera (issue #14). The SDK enumerates every attached OBSBOT
+    // device; the app controls ONE at a time (modal — the reporter's use case).
+    // setPreferredSn selects which one to bind (persisted choice; empty = the
+    // first enumerated), cmdSelectDevice switches at runtime.
+    void setPreferredSn(const QString &sn);
+    void cmdSelectDevice(const QString &sn);
 
     void cmdWake();
     void cmdSleep();
@@ -99,6 +105,9 @@ signals:
     // several cameras attached they track the one the app is controlling.
     void videoNodeResolved(const QString &path);
     void deviceLost(const QString &reason);
+    // Every attached OBSBOT device the SDK has finished enumerating (parallel
+    // lists), plus which one is bound. Emitted on bind, plug and unplug.
+    void deviceListChanged(const QStringList &sns, const QStringList &labels, const QString &currentSn);
     void statusUpdate(int runState, int aiModeRaw, double zoom, bool zoomValid);
     // Extra device state read from the same status push: face autofocus on/off,
     // HDR on/off, whether HDR is supported in the current mode, and current fps.
@@ -128,11 +137,14 @@ private:
     void statusPulse();
     void onSdkStatus(int runStatus, int aiMode, int faceFocus, int hdr, int hdrSupport, int fps, int sleepMicro, int autoSleepSec);
     void onDevChanged(const QString &sn, bool plugged);
+    void unbindDevice();             // drop the bound device without touching the SDK
+    void emitDeviceList();           // snapshot of Devices::getDevList() → deviceListChanged
 
     static void sdkStatusTrampoline(void *param, const void *data);
 
     std::shared_ptr<Device> m_dev;
     QString m_sn;
+    QString m_preferredSn;           // #14: which camera to bind when several are attached
     QTimer *m_pollTimer = nullptr;
     int m_pollElapsedMs = 0;
     int m_pollTimeoutMs = 6000;
