@@ -173,6 +173,7 @@ void CameraWorker::pollTick() {
 void CameraWorker::bindDevice(const std::shared_ptr<Device> &d) {
     m_dev = d;
     m_sn = QString::fromStdString(d->devSn());
+    m_devStatusQuirkLogged = false;
 
     const QString product = productName(d->productType());
     const QString fw = QString::fromStdString(d->devVersion());
@@ -255,6 +256,22 @@ void CameraWorker::onSdkStatus(int runStatus, int aiMode, int faceFocus, int hdr
         m_aiOnGrace.invalidate();
     }
     m_aiTracking = (aiMode > Device::AiWorkModeNone);
+
+    // Issue #13 (Tiny 3 Lite, hardware report): CameraStatus.dev_status is not
+    // a reliable picture of the device on that model — it reports Sleep while
+    // the camera is demonstrably awake and tracking (ai_mode=2). A camera that
+    // reports an engaged AI mode is awake by definition, so reconcile in that
+    // direction and say so once, instead of showing an "asleep" indicator (and
+    // the moon overlay + Wake button) for a camera that is following someone.
+    if (m_aiTracking && runStatus == Device::DevStatusSleep) {
+        if (!m_devStatusQuirkLogged) {
+            m_devStatusQuirkLogged = true;
+            emit logLine("sys", QStringLiteral(
+                "status: device reports asleep while AI tracking is engaged — trusting ai_mode "
+                "(dev_status is unreliable on some models, e.g. Tiny 3 Lite, #13)"));
+        }
+        runStatus = Device::DevStatusRun;
+    }
 
     // Refresh real zoom from the getter (1.0–2.0). Runs on the worker thread,
     // serialized with commands — never on the SDK callback thread.

@@ -66,6 +66,8 @@ class CameraController : public QObject {
     Q_PROPERTY(int previewResIndex READ previewResIndex WRITE setPreviewResIndex NOTIFY settingsChanged)
     Q_PROPERTY(QString previewRes READ previewRes NOTIFY settingsChanged)   // human-readable, for STATUS
     Q_PROPERTY(bool sleepOnExit READ sleepOnExit WRITE setSleepOnExit NOTIFY settingsChanged)
+    // Start the embedded preview on Wake (issue #13; main.cpp acts on wakeRequested).
+    Q_PROPERTY(bool wakeStartsPreview READ wakeStartsPreview WRITE setWakeStartsPreview NOTIFY settingsChanged)
     // Experimental, OPT-IN: slow the status cadence while gesture control is on
     // (frequent polling suppresses the camera's gesture recognizer). Off by
     // default so normal behavior is unchanged; kept toggleable for A/B testing
@@ -135,6 +137,7 @@ public:
     int previewResIndex() const { return m_settings.previewResIndex; }
     QString previewRes() const;   // e.g. "1080p60"
     bool sleepOnExit() const { return m_settings.sleepOnExit; }
+    bool wakeStartsPreview() const { return m_settings.wakeStartsPreview; }
     bool gestureLowTraffic() const { return m_settings.gestureLowTraffic; }
     int autoSleepIndex() const { return m_settings.autoSleepIdx; }
     int micSleepIndex() const { return m_settings.micSleepIdx; }
@@ -163,6 +166,7 @@ public slots:
     void setAiReturnPreset(int p);
     void setPreviewResIndex(int idx);
     void setSleepOnExit(bool on);
+    void setWakeStartsPreview(bool on);
     void setGestureLowTraffic(bool on);
     void setAutoSleepIndex(int idx);
     void setMicSleepIndex(int idx);
@@ -211,6 +215,9 @@ signals:
     void logLine(const QString &kind, const QString &message);
     void commandResult(const QString &action, bool ok, const QString &message);
     void discoveryFinished(bool found);   // one-shot, used by --self-test
+    // Emitted on every user Wake; main.cpp starts the preview if configured
+    // (the controller itself does not know the PreviewEngine).
+    void wakeRequested();
     void videoDevPathChanged(const QString &path);
 
 private slots:

@@ -286,6 +286,13 @@ void CameraController::setSleepOnExit(bool on) {
     emit settingsChanged();
 }
 
+void CameraController::setWakeStartsPreview(bool on) {
+    if (on == m_settings.wakeStartsPreview) return;
+    m_settings.wakeStartsPreview = on;
+    persist();
+    emit settingsChanged();
+}
+
 void CameraController::setGestureLowTraffic(bool on) {
     if (on == m_settings.gestureLowTraffic) return;
     m_settings.gestureLowTraffic = on;
@@ -304,7 +311,10 @@ void CameraController::setGestureLowTraffic(bool on) {
 // ---------------------------------------------------------------------------
 // User actions
 // ---------------------------------------------------------------------------
-void CameraController::wake() { QMetaObject::invokeMethod(m_worker, "cmdWake", Qt::QueuedConnection); }
+void CameraController::wake() {
+    QMetaObject::invokeMethod(m_worker, "cmdWake", Qt::QueuedConnection);
+    emit wakeRequested();
+}
 void CameraController::sleep() { QMetaObject::invokeMethod(m_worker, "cmdSleep", Qt::QueuedConnection); }
 void CameraController::center() { QMetaObject::invokeMethod(m_worker, "cmdCenter", Qt::QueuedConnection); }
 

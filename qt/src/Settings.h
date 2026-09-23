@@ -45,6 +45,12 @@ struct AppSettings {
     // Put the camera to sleep when the app closes. Off by default.
     bool sleepOnExit = false;
 
+    // Start the embedded preview when Wake is pressed (issue #13): some models
+    // (Tiny 3 Lite, hardware report) accept cameraSetDevRunStatusR(Run) with
+    // rc=0 but only come fully awake — gimbal, AI — once a video stream is
+    // open. Off by default; Wake alone is enough on the Tiny 3.
+    bool wakeStartsPreview = false;
+
     // Presets (app-local; the SDK's native presets are undocumented for Tiny 3).
     std::array<PresetData, 3> presets{};
 

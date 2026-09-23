@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
     s.previewResIndex = 3;
     s.autoSleepIdx = 3;
     s.micSleepIdx = 2;
+    s.wakeStartsPreview = true;
     s.presets[1].set = true;
     s.presets[1].name = "Speaker";
     s.presets[1].pan = -33.5;
@@ -61,6 +62,7 @@ int main(int argc, char **argv) {
     CHECK(r.previewResIndex == 3);
     CHECK(r.autoSleepIdx == 3);
     CHECK(r.micSleepIdx == 2);
+    CHECK(r.wakeStartsPreview == true);
     CHECK(r.presets[1].set == true);
     CHECK(r.presets[1].name == QString("Speaker"));
     CHECK(r.presets[1].pan == -33.5);

@@ -96,6 +96,36 @@ Item {
             }
         }
 
+        // Start the preview with Wake (issue #13 — Tiny 3 Lite wakes fully only
+        // once a stream is open).
+        GlassPanel {
+            Layout.fillWidth: true
+            implicitHeight: wakePrevRow.implicitHeight + 24
+            RowLayout {
+                id: wakePrevRow
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 12
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 1
+                    Text { text: "Start preview on Wake"; color: Theme.fg; font.family: Theme.mono; font.pixelSize: 13 }
+                    Text {
+                        text: "Also start the embedded preview when you press Wake. Some models (Tiny 3 Lite) accept the wake "
+                            + "command but only come fully awake — gimbal and AI — once a video stream is open."
+                        color: Theme.dimmer; font.family: Theme.sans; font.pixelSize: 12
+                        wrapMode: Text.WordWrap; Layout.fillWidth: true
+                    }
+                }
+                ToggleChip {
+                    text: cam.wakeStartsPreview ? "On" : "Off"
+                    tone: Theme.live
+                    checked: cam.wakeStartsPreview
+                    onToggled: (c) => cam.wakeStartsPreview = c
+                }
+            }
+        }
+
         // Auto-sleep timer (issue #9). "Device" = don't manage.
         GlassPanel {
             Layout.fillWidth: true

@@ -139,6 +139,7 @@ private:
     bool m_devChangedRegistered = false;
     std::atomic<bool> m_shuttingDown{false};
     bool m_quiet = false;   // gesture diagnostic: drop status pushes while true
+    bool m_devStatusQuirkLogged = false;   // #13: "asleep while tracking" noted once per bind
 
     // Gesture-friendly status cadence (see setGestureFriendly).
     bool m_gestureFriendly = false;

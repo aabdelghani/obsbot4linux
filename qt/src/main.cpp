@@ -120,6 +120,22 @@ int main(int argc, char **argv) {
                          preview.setResIndex(controller.previewResIndex());
                      });
 
+    // Issue #13: some models (Tiny 3 Lite) only come fully awake once a video
+    // stream is open — Wake alone returns rc=0 and nothing happens. Either start
+    // the preview with Wake (opt-in setting) or, if the preview is not running,
+    // say so in the log so the user knows what to try.
+    QObject::connect(&controller, &CameraController::wakeRequested, &app, [&]() {
+        if (preview.active()) return;
+        if (controller.wakeStartsPreview()) {
+            emit controller.logLine("sys", QStringLiteral("wake: starting the preview too (setting: start preview on Wake)"));
+            preview.start();
+        } else {
+            emit controller.logLine("sys", QStringLiteral(
+                "wake: if the camera stays asleep, start the preview — some models (Tiny 3 Lite) "
+                "only wake fully once a video stream is open (#13). Settings → \"Start preview on Wake\" automates this."));
+        }
+    });
+
     // Standard UVC controls (white balance / exposure / …, issue #16). Follows
     // the SDK-reported node of the connected camera; falls back to the first
     // OBSBOT node so it also works if the SDK is not bound yet.
