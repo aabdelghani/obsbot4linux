@@ -93,6 +93,11 @@ signals:
     void logLine(const QString &kind, const QString &message);
     void connectionResolved(bool found, const QString &product, const QString &sn,
                             const QString &fw, const QString &mode, int enumId);
+    // The bound device's V4L2 capture node as reported by the SDK
+    // (Device::videoDevPath, e.g. "/dev/video0"); empty if unknown. The
+    // embedded preview and the UVC control backend follow this node, so with
+    // several cameras attached they track the one the app is controlling.
+    void videoNodeResolved(const QString &path);
     void deviceLost(const QString &reason);
     void statusUpdate(int runState, int aiModeRaw, double zoom, bool zoomValid);
     // Extra device state read from the same status push: face autofocus on/off,

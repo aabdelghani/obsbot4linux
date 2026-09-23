@@ -18,6 +18,7 @@
 
 #include "CameraController.h"
 #include "PreviewEngine.h"
+#include "UvcControls.h"
 
 int main(int argc, char **argv) {
     int waitMs = 6000;
@@ -61,6 +62,15 @@ int main(int argc, char **argv) {
     QGuiApplication::setOrganizationName("obsbot4linux");
 
     CameraController controller;
+
+    // OBSBOT4LINUX_LOG_STDERR=1 mirrors the activity log to stderr in GUI mode
+    // too (debugging / driving the app from a script); the self-test always does.
+    if (!selfTest && qEnvironmentVariableIntValue("OBSBOT4LINUX_LOG_STDERR") > 0) {
+        QObject::connect(&controller, &CameraController::logLine, &app,
+                         [](const QString &k, const QString &m) {
+                             std::fprintf(stderr, "[%s] %s\n", qPrintable(k), qPrintable(m));
+                         });
+    }
 
     if (selfTest) {
         int code = 3;   // default: no device
@@ -110,9 +120,24 @@ int main(int argc, char **argv) {
                          preview.setResIndex(controller.previewResIndex());
                      });
 
+    // Standard UVC controls (white balance / exposure / …, issue #16). Follows
+    // the SDK-reported node of the connected camera; falls back to the first
+    // OBSBOT node so it also works if the SDK is not bound yet.
+    UvcControls uvc;
+    QObject::connect(&uvc, &UvcControls::logLine, &controller, &CameraController::logLine);
+    QObject::connect(&controller, &CameraController::videoDevPathChanged, &app,
+                     [&](const QString &path) {
+                         preview.setPreferredNode(path);
+                         uvc.setDevicePath(path);
+                     });
+    // Deferred so the first "uvc: controls on …" line lands in the activity log
+    // after the QML log model is connected (first event-loop pass).
+    QTimer::singleShot(0, &uvc, [&uvc]() { uvc.setDevicePath(QString()); });
+
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("cam", &controller);
     engine.rootContext()->setContextProperty("preview", &preview);
+    engine.rootContext()->setContextProperty("uvc", &uvc);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     engine.loadFromModule("Obsbot", "Main");
 #else

@@ -1,10 +1,12 @@
 #include "PreviewEngine.h"
 #include "JpegDht.h"
 #include "PreviewFormats.h"
+#include "V4l2Scan.h"
 
 #include <QDir>
 #include <QImage>
 #include <QVideoFrame>
+#include <QVideoFrameFormat>
 
 #include <algorithm>
 #include <cerrno>
@@ -294,31 +296,9 @@ void PreviewEngine::refreshDevice() {
     // same card but lack V4L2_CAP_VIDEO_CAPTURE, so they're skipped naturally.
     const bool wasAvailable = available();
     const QString oldPath = m_devPath;
-    QString found;
-
-    QStringList nodes = QDir(QStringLiteral("/dev"))
-                            .entryList({QStringLiteral("video*")}, QDir::System | QDir::Files);
-    // Numeric order (lexical puts video10 before video2) so the pick is stable
-    // across boots when several nodes exist.
-    std::sort(nodes.begin(), nodes.end(), [](const QString &a, const QString &b) {
-        return a.mid(5).toInt() < b.mid(5).toInt();
-    });
-    for (const QString &n : nodes) {
-        const QString path = QStringLiteral("/dev/") + n;
-        const int fd = ::open(path.toLocal8Bit().constData(), O_RDWR | O_NONBLOCK | O_CLOEXEC);
-        if (fd < 0) continue;
-        v4l2_capability cap{};
-        const bool ok = (xioctl(fd, VIDIOC_QUERYCAP, &cap) == 0);
-        ::close(fd);
-        if (!ok) continue;
-        const __u32 caps = (cap.capabilities & V4L2_CAP_DEVICE_CAPS) ? cap.device_caps
-                                                                     : cap.capabilities;
-        if (!(caps & V4L2_CAP_VIDEO_CAPTURE)) continue;
-        const QString card = QString::fromLatin1(reinterpret_cast<const char *>(cap.card));
-        if (!card.contains(QLatin1String("OBSBOT"), Qt::CaseInsensitive)) continue;
-        found = path;
-        break;
-    }
+    // The SDK-reported node of the controlled camera wins; otherwise the first
+    // OBSBOT capture node by card name (shared scan — see V4l2Scan).
+    const QString found = v4l2scan::pickNode(m_preferred);
 
     if (found == oldPath) return;   // no change (incl. both empty)
     m_devPath = found;
@@ -334,6 +314,12 @@ void PreviewEngine::refreshDevice() {
     emit availabilityChanged();
     if (available() && !wasAvailable)
         emit logLine("sys", QStringLiteral("preview: video device found (%1)").arg(m_devPath));
+}
+
+void PreviewEngine::setPreferredNode(const QString &path) {
+    if (path == m_preferred) return;
+    m_preferred = path;
+    refreshDevice();
 }
 
 void PreviewEngine::teardownThread() {

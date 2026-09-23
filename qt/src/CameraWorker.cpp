@@ -6,6 +6,8 @@
 #include <cmath>
 #include <string>
 
+#include <dlfcn.h>
+
 #include <dev/devs.hpp>
 
 namespace {
@@ -57,6 +59,21 @@ const char *devModeName(Device::DevMode m) {
     case Device::DevModeBle: return "BLE";
     default:                 return "Unknown";
     }
+}
+
+// The bound device's V4L2 node as the SDK knows it ("/dev/video0").
+// dev.hpp declares Device::videoDevPath() only under _WIN32 / __APPLE__, but the
+// Linux libdev.so exports it too (nm: Device::videoDevPath[abi:cxx11]() const,
+// same const std::string& signature as the macOS declaration). Resolve it at
+// runtime so the build never depends on the undeclared member: on the
+// Itanium C++ ABI a non-virtual member function is a plain function taking
+// `this` first. Returns empty if the symbol is absent, so callers fall back to
+// the card-name scan (V4l2Scan) and nothing depends on this working.
+QString sdkVideoDevPath(const Device *dev) {
+    using Fn = const std::string &(*)(const Device *);
+    static const Fn fn = reinterpret_cast<Fn>(::dlsym(RTLD_DEFAULT, "_ZNK6Device12videoDevPathB5cxx11Ev"));
+    if (!fn || !dev) return QString();
+    return QString::fromStdString(fn(dev));
 }
 
 } // namespace
@@ -169,6 +186,11 @@ void CameraWorker::bindDevice(const std::shared_ptr<Device> &d) {
     emit logLine("ok", QStringLiteral("connected: %1  (SN %2, fw %3, %4)")
                            .arg(product, m_sn, fw, mode));
     emit connectionResolved(true, product, m_sn, fw, mode, enumId);
+    const QString node = sdkVideoDevPath(d.get());
+    emit logLine("sys", node.isEmpty()
+        ? QStringLiteral("video node: SDK did not report one — using the first OBSBOT node")
+        : QStringLiteral("video node (SDK): %1").arg(node));
+    emit videoNodeResolved(node);
 
     // Read real zoom + current image params once now (blocking getters, safe here).
     refreshZoom();

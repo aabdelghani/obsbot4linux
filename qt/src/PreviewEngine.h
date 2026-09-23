@@ -99,10 +99,16 @@ signals:
 
 private:
     void refreshDevice();            // (re)scan /dev/video* for the OBSBOT node
+public slots:
+    // Prefer this node (the SDK's videoDevPath of the controlled camera) over
+    // the first OBSBOT node found — matters with several cameras attached.
+    void setPreferredNode(const QString &path);
+private:
     void teardownThread();           // stop + join the capture thread
 
     QMediaDevices m_mediaDevices;    // used ONLY as a hotplug change trigger
     QString m_devPath;               // e.g. "/dev/video0" (found by card name)
+    QString m_preferred;             // SDK-reported node for the bound camera
     V4l2CaptureThread *m_thread = nullptr;
     QPointer<QVideoSink> m_sink;
     bool m_active = false;

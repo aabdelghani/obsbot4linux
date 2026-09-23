@@ -59,6 +59,7 @@ CameraController::CameraController(QObject *parent) : QObject(parent) {
     connect(m_worker, &CameraWorker::logLine, this, &CameraController::logLine);
     connect(m_worker, &CameraWorker::connectionResolved, this, &CameraController::onConnectionResolved);
     connect(m_worker, &CameraWorker::deviceLost, this, &CameraController::onDeviceLost);
+    connect(m_worker, &CameraWorker::videoNodeResolved, this, &CameraController::onVideoNode);
     connect(m_worker, &CameraWorker::statusUpdate, this, &CameraController::onStatusUpdate);
     connect(m_worker, &CameraWorker::auxStatus, this, &CameraController::onAuxStatus);
     connect(m_worker, &CameraWorker::zoomUpdate, this, &CameraController::onZoomUpdate);
@@ -576,8 +577,15 @@ void CameraController::onConnectionResolved(bool found, const QString &product, 
     emit discoveryFinished(found);
 }
 
+void CameraController::onVideoNode(const QString &path) {
+    if (path == m_videoDevPath) return;
+    m_videoDevPath = path;
+    emit videoDevPathChanged(path);
+}
+
 void CameraController::onDeviceLost(const QString &reason) {
     m_connState = Disconnected;
+    onVideoNode(QString());
     m_runState = RunUnknown;
     m_aiTracking = false;
     m_faceFocus = false;

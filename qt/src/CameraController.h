@@ -35,6 +35,8 @@ class CameraController : public QObject {
     Q_PROPERTY(QString firmware MEMBER m_firmware NOTIFY identityChanged)
     Q_PROPERTY(QString mode MEMBER m_mode NOTIFY identityChanged)
     Q_PROPERTY(int enumId MEMBER m_enumId NOTIFY identityChanged)
+    // V4L2 node of the connected camera per the SDK (empty when unknown/none).
+    Q_PROPERTY(QString videoDevPath READ videoDevPath NOTIFY videoDevPathChanged)
 
     // ----- live device state -----
     Q_PROPERTY(int runState READ runState NOTIFY statusChanged)
@@ -116,6 +118,7 @@ public:
 
     // property getters
     int connState() const { return m_connState; }
+    QString videoDevPath() const { return m_videoDevPath; }
     bool connected() const { return m_connState == Connected; }
     bool discovering() const { return m_connState == Discovering; }
     int runState() const { return m_runState; }
@@ -208,11 +211,13 @@ signals:
     void logLine(const QString &kind, const QString &message);
     void commandResult(const QString &action, bool ok, const QString &message);
     void discoveryFinished(bool found);   // one-shot, used by --self-test
+    void videoDevPathChanged(const QString &path);
 
 private slots:
     void onConnectionResolved(bool found, const QString &product, const QString &sn,
                               const QString &fw, const QString &mode, int enumId);
     void onDeviceLost(const QString &reason);
+    void onVideoNode(const QString &path);
     void onStatusUpdate(int runState, int aiModeRaw, double zoom, bool zoomValid);
     void onAuxStatus(bool faceFocus, bool hdrOn, bool hdrSupport, int fps, int sleepMicro, int autoSleepSec);
     void onZoomUpdate(double zoom, bool valid);
@@ -242,6 +247,7 @@ private:
     // NOT re-fire and move the gimbal. Cleared only on a real device loss.
     bool m_hadDevice = false;
     QString m_product, m_sn, m_firmware, m_mode;
+    QString m_videoDevPath;
     int m_enumId = -1;
     double m_zoom = 1.0;
     bool m_zoomValid = false;

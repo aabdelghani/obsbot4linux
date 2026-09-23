@@ -45,14 +45,20 @@ qt_add_executable(obsbot4linux
     src/CameraWorker.cpp
     src/PreviewEngine.cpp
     src/Settings.cpp
+    src/UvcControls.cpp
+    src/V4l2Scan.cpp
 )
 
 # Theme.qml is a singleton (pragma Singleton).
 set_source_files_properties(qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
+# RESOURCE_PREFIX is pinned so the qrc URL of Main.qml is the same on every Qt
+# version (6.5+ defaults to /qt/qml via QTP0001; 6.4 defaults to /) — the 6.4
+# fallback in main.cpp loads it by URL.
 qt_add_qml_module(obsbot4linux
     URI Obsbot
     VERSION 1.0
+    RESOURCE_PREFIX /qt/qml
     QML_FILES
         qml/Main.qml
         qml/Theme.qml
@@ -120,4 +126,9 @@ if(BUILD_TESTS)
     add_executable(settings_roundtrip_test tests/settings_roundtrip_test.cpp src/Settings.cpp)
     target_link_libraries(settings_roundtrip_test PRIVATE Qt6::Core)
     add_test(NAME settings_roundtrip COMMAND settings_roundtrip_test)
+    # Hardware smoke test for the UVC control backend (issue #16): needs an
+    # OBSBOT camera on a V4L2 node, so it is built but NOT registered with
+    # ctest — run it by hand:  ./qt/build/uvc_controls_smoke
+    add_executable(uvc_controls_smoke tests/uvc_controls_smoke.cpp src/UvcControls.cpp src/V4l2Scan.cpp)
+    target_link_libraries(uvc_controls_smoke PRIVATE Qt6::Core)
 endif()
