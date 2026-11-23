@@ -53,6 +53,7 @@ public slots:
     // experimental 15 s status cadence (opt-in setting — see setGestureFriendly).
     void cmdSetGesture(bool on, bool lowTraffic);
     void cmdSetHdr(bool on);                           // cameraSetWdrR
+    void cmdResetAwbOffset();                          // cameraSetWhiteBalanceR(WhiteBalanceSetting)
     // Auto-sleep timer (cameraSetSuspendTimeU; <=0 disables auto-sleep) and
     // mic-during-sleep (cameraSetMicrophoneDuringSleepU). The SDK category
     // docs omit the Tiny 3 for BOTH — rc + the status push's sleep_micro

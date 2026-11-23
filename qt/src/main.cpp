@@ -152,6 +152,7 @@ int main(int argc, char **argv) {
     // OBSBOT node so it also works if the SDK is not bound yet.
     UvcControls uvc;
     QObject::connect(&uvc, &UvcControls::logLine, &controller, &CameraController::logLine);
+    QObject::connect(&uvc, &UvcControls::wbAutoEngaged, &controller, &CameraController::resetAwbOffset);
     QObject::connect(&controller, &CameraController::videoDevPathChanged, &app,
                      [&](const QString &path) {
                          preview.setPreferredNode(path);

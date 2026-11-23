@@ -48,7 +48,12 @@ QString UvcControls::unavailableReason() const {
 
 void UvcControls::setDevicePath(const QString &preferred) {
     const QString node = v4l2scan::pickNode(preferred);
-    if (node == m_path && !node.isEmpty()) { refresh(); return; }
+    if (node == m_path && !node.isEmpty()) {
+        refresh();
+        // Same node, but this call usually marks the SDK binding the camera.
+        if (m_wb.present && m_wb.value != 0) emit wbAutoEngaged();
+        return;
+    }
     m_path = node;
     queryAll();
     if (m_path.isEmpty())
@@ -61,6 +66,7 @@ void UvcControls::setDevicePath(const QString &preferred) {
                                      m_backlight.present ? "yes" : "no", m_powerLine.present ? "yes" : "no"));
     emit deviceChanged();
     emit valuesChanged();
+    if (m_wb.present && m_wb.value != 0) emit wbAutoEngaged();
 }
 
 void UvcControls::refresh() {
@@ -157,7 +163,8 @@ int UvcControls::autoExposureValue() const {
 }
 
 void UvcControls::setWbAuto(bool on) {
-    write(m_wb, on ? 1 : 0, QStringLiteral("white balance"), on ? QStringLiteral("auto") : QStringLiteral("manual"));
+    const bool ok = write(m_wb, on ? 1 : 0, QStringLiteral("white balance"), on ? QStringLiteral("auto") : QStringLiteral("manual"));
+    if (on && ok) emit wbAutoEngaged();
     if (!on && m_wbTemp.present) {
         // Leaving auto: the device keeps whatever temperature it last had (the
         // Tiny 3 reports 0 while auto) — push the slider's value so the UI and

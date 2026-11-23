@@ -400,6 +400,10 @@ void CameraController::setGesture(bool on) {
     emit aiChanged();
 }
 
+void CameraController::resetAwbOffset() {
+    QMetaObject::invokeMethod(m_worker, "cmdResetAwbOffset", Qt::QueuedConnection);
+}
+
 void CameraController::setHdr(bool on) {
     if (!m_hdrSupport) {
         emit logLine("warn", QStringLiteral("hdr: device reports HDR not supported in this mode"));

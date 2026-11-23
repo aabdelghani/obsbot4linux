@@ -98,6 +98,10 @@ public slots:
 signals:
     void deviceChanged();
     void valuesChanged();
+    // Auto white balance was just engaged (or found engaged on a newly bound
+    // node). The Tiny 3 resets its AWB offset to an extreme on every switch
+    // into auto, so the SDK side re-centres it — see CameraWorker::cmdResetAwbOffset.
+    void wbAutoEngaged();
     void logLine(const QString &kind, const QString &message);
 
 private:
