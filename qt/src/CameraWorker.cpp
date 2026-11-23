@@ -640,6 +640,29 @@ void CameraWorker::cmdSetHdr(bool on) {
     emit logLine(ok ? "ok" : "warn", QStringLiteral("hdr %1  rc=%2").arg(on ? "on" : "off").arg(rc));
 }
 
+// Tiny 3 (fw 6.6.9.3): every switch into auto white balance — through the UVC
+// control or the SDK's simple setter — leaves the camera's AWB offset at raw
+// 0/0. The scale is 0..56 with 28 neutral (SDK WhiteBalanceOffset: -7..+7 in
+// 0.25 steps), so raw 0 is the far green/blue corner and auto renders with a
+// heavy green cast. Re-centre both axes. Measured on hardware: a harmless
+// no-op while white balance is manual. The getter always reports 0/0 for the
+// offsets on this firmware, so there is no readback to check.
+void CameraWorker::cmdResetAwbOffset() {
+    if (!m_dev || m_shuttingDown) return;
+    if (m_dev->productType() != ObsbotProdTiny3) return;   // only verified there
+    Device::WhiteBalanceSetting s{};
+    if (m_dev->cameraGetWhiteBalanceR(s) != RM_RET_OK) {
+        emit logLine("warn", QStringLiteral("awb offset: cannot read white balance state — not re-centred"));
+        return;
+    }
+    if (s.light_mode != Device::DevWhiteBalanceAuto) return;
+    s.xab_offset = 28;
+    s.ygm_offset = 28;
+    const int rc = m_dev->cameraSetWhiteBalanceR(s);
+    emit logLine(rc == RM_RET_OK ? "ok" : "warn",
+                 QStringLiteral("awb offset: re-centred for auto white balance  rc=%1").arg(rc));
+}
+
 void CameraWorker::cmdSetAutoSleep(int seconds, const QString &label) {
     const QString a = QStringLiteral("auto sleep");
     if (!requireDevice(a)) return;

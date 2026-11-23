@@ -194,6 +194,7 @@ public slots:
     void setGesture(bool on);         // gesture control on/off
     void gestureQuietTest();          // 60 s SDK-traffic pause (gesture diagnostic)
     void setHdr(bool on);             // HDR/WDR on/off (only when capHdr)
+    void resetAwbOffset();            // re-centre the auto-WB offset (Tiny 3 green cast)
     void setImageParam(const QString &param, int value);  // brightness/contrast/saturation/sharpness
     void rescan();
     void selectDevice(const QString &sn);   // #14: bind another attached camera
